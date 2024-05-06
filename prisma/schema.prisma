@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id               String            @id @default(auto()) @map("_id") @db.ObjectId
+  fullName         String
+  email            String            @unique
+  phoneNumber      String            @unique
+  dateOfBirth      DateTime?
+  imageUrl         String?
+  password         String
+  emailVerified    Boolean           @default(false)
+  role             Role
+  locationId       String?           @db.ObjectId
+  location         Location?         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  verficationCodes VerficationCode[]
+  payments         Payment[]
+  testimonies      Testimony[]
+  AuthToken        AuthToken?
+
+  @@map("users")
+}
+
+enum Action {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model VerficationCode {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  code      String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    Action
+  createdAt DateTime @default(now())
+
+  @@unique([userId, action])
+  @@index([createdAt], map: "createdAt_1")
+  @@map("verification-codes")
+}
+
+type MapLocation {
+  longitude Int
+  latitude  Int
+}
+
+model Location {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  country        String
+  state          String
+  address        String
+  pastorInCharge String
+  mapLocation    MapLocation?
+  services       Service[]
+  users          User[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  programs       Program[]
+
+  @@unique([country, state, pastorInCharge])
+  @@map("locations")
+}
+
+model Service {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  day        String
+  theme      String
+  startTime  String
+  endTime    String
+  locationId String   @db.ObjectId
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([theme, day])
+  @@map("services")
+}
+
+model Audio {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  link         String
+  timeRecorded DateTime
+  preacher     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("audios")
+}
+
+model Payment {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  amount        Int
+  date          DateTime @default(now())
+  userId        String   @db.ObjectId
+  users         User     @relation(fields: [userId], references: [id])
+  paymentMethod String
+  createdAt     DateTime @default(now())
+
+  @@map("payments")
+}
+
+model Testimony {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  content   String
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("testimonies")
+}
+
+enum ProgramType {
+  PROGRAM
+  EVENT
+}
+
+model Program {
+  id         String      @id @default(auto()) @map("_id") @db.ObjectId
+  type       ProgramType
+  theme      String
+  startTime  DateTime
+  endTime    DateTime
+  banner     String
+  ministers  String[]
+  locationId String      @db.ObjectId
+  location   Location    @relation(fields: [locationId], references: [id])
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@map("programs")
+}
+
+model AuthToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  userId    String   @unique @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+
+  @@index([expiresAt], map: "expiresAt_1")
+  @@map("auth-tokens")
+}
